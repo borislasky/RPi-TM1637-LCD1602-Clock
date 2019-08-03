@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "./reloj.py", line 20, in <module>
+    import paho.mqtt.client as mqtt
+ImportError: No module named 'paho'
