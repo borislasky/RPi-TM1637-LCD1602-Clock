@@ -14,8 +14,8 @@ Funciones:
  * hora + minutos mostrados en un módulo de 4x7segmentos TM1637
  * Fecha + información meteorológica mostrados en un LCD1602  
   
-  La información metorológica la obtiene de una cuenta gratuita de openweathermap
-  Se consulta mediante nodered instalado en el mismo host.
+  La información metorológica la obtiene de una cuenta gratuita de openweathermap.  
+  Se consulta mediante nodered instalado en el mismo host.  
   La información se publica via MQTT para su uso por este reloj y por otras aplicaciones.
  
   
