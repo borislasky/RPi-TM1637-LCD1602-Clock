@@ -1,0 +1,4 @@
+  File "./reloj.py", line 21
+    import libraries/tm1637                    # 7 segmentos
+                    ^
+SyntaxError: invalid syntax
