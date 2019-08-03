@@ -30,9 +30,9 @@ Display = tm1637.TM1637(23,24,tm1637.BRIGHT_TYPICAL)
 lcd = i2c_LCD_driver.lcd()
 
 # Cliente MQTT
-MQTT_USER = 'Tu usuario'
-MQTT_PASS = 'Tu password'
-MQTT_HOST = 'Tu host'
+MQTT_USER = 'tu usuario'
+MQTT_PASS = 'tu password'
+MQTT_HOST = 'tu host'
 MQTT_PORT = 1883     #default
 MQTT_RAIZ = '/torredembarra/DatosMeteo/#'
 MQTT_KEEP = 65535    # Un montón de segundos
@@ -183,7 +183,7 @@ def ini():
    mqttc.on_message = on_message
    mqttc.username_pw_set(MQTT_USER, MQTT_PASS)
    mqttc.connect(MQTT_HOST, MQTT_PORT, MQTT_KEEP)
-   mqttc.subscribe(MQTT_TOPIC_RAIZ, qos=0)
+   mqttc.subscribe(MQTT_RAIZ, qos=0)
    mqttc.loop_start()
    lcd.lcd_clear()
 
