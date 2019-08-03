@@ -33,9 +33,9 @@ lcd = i2c_LCD_driver.lcd()
 MQTT_USER = 'Tu usuario'
 MQTT_PASS = 'Tu password'
 MQTT_HOST = 'Tu host'
-MQTT_PORT = 1883  #default
-MQTT_RAIZ '/torredembarra/DatosMeteo/#'
-MQTT_KEEP 65535   # Un montón de segundos
+MQTT_PORT = 1883     #default
+MQTT_RAIZ = '/torredembarra/DatosMeteo/#'
+MQTT_KEEP = 65535    # Un montón de segundos
 mqttc = mqtt.Client(client_id='Reloj_de_la_cajita', clean_session=True, userdata=None,
       protocol=mqtt.MQTTv311, transport='tcp')
 
