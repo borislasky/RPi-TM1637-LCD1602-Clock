@@ -41,8 +41,7 @@ Display = tm1637.TM1637(23,24,tm1637.BRIGHT_TYPICAL)
 lcd = i2c_LCD_driver.lcd()
 
 # Cliente MQTT
-MQTT_USER = 'pi'
-MQTT_PASS = 'picom222'
+from MQTT_AUTH import MQTT_USER, MQTT_PASS
 MQTT_HOST = 'localhost'
 MQTT_PORT = 1883     #default
 MQTT_RAIZ = '/torredembarra/DatosMeteo/#'
