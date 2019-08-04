@@ -7,10 +7,20 @@
       - En la primera fila fecha
       - En la segunda datos meteorológicos obtenidos por MQTT.
         Estos datos los obtiene nodered de lasky.
+      - Conectado buzzer que dará los cuartos y las horas
    Las razones por la que usar nodered para obtener los datos meteorologicos son:
       1.- Tener los datos disponibles para esta y otras aplicaciones.
       2.- Desacoplar la ejecución del reloj de la obtención y tratamiento
           de los datos.
+
+   Por MQTT puedo recibir una petición de alarma de un determinado número
+   de minutos. Topic: /torredembarra/reloj7/setalarma
+   En este caso:
+      - Publico el día y hora de lanzamiento de la alarma.
+        Topic: /torredembarra/reloj7/alarma
+      - A la hora de vencimiento llamo a una API que hace sonar un
+        timbre en mini. Publico "" como hora de vencimiento
+
 """
 
 import sys
@@ -20,6 +30,7 @@ import RPi.GPIO as GPIO
 import paho.mqtt.client as mqtt
 import tm1637                    # 7 segmentos
 import i2c_LCD_driver            # va por i2c (bus 1)
+from subprocess import call
 
 # GPIOs TM1637
 # CLK -> GPIO23 (Pin 16)
@@ -30,9 +41,9 @@ Display = tm1637.TM1637(23,24,tm1637.BRIGHT_TYPICAL)
 lcd = i2c_LCD_driver.lcd()
 
 # Cliente MQTT
-MQTT_USER = 'tu usuario'
-MQTT_PASS = 'tu password'
-MQTT_HOST = 'tu host'
+MQTT_USER = 'pi'
+MQTT_PASS = 'picom222'
+MQTT_HOST = 'localhost'
 MQTT_PORT = 1883     #default
 MQTT_RAIZ = '/torredembarra/DatosMeteo/#'
 MQTT_KEEP = 65535    # Un montón de segundos
@@ -191,23 +202,24 @@ def ini():
 def main():
    ini()
    ult_dia  = 'desc'
-   ult_hora = 'desc'
-   ult_min  = 'desc'
-   ult_seg  = 'desc'
+   ult_hora = -1
+   ult_min  = -1
+   ult_seg  = -1
    escrito  = False
+   sonado   = False
 
    while True:
       now = datetime.now()
-      ahora = now.strftime('%H:%M:%S')
-      hora = ahora[0:2]
-      min  = ahora[3:5]
-      seg  = ahora[6:8]
+      #ahora = now.strftime('%H:%M:%S')
+      hora = now.hour
+      min  = now.minute
+      seg  = now.second
       if seg != ult_seg:
          ult_seg = seg
          Display.ShowDoublepoint((int(seg)+1)%2)
       if min != ult_min:
          ult_min = min
-         Display.Show([int(hora[0:1]), int(hora[1:2]), int(min[0:1]), int(min[1:2])])
+         Display.Show([0 if hora < 10 else hora/10, hora%10, 0 if min < 10 else min/10, min%10])
       if now.day != ult_dia:
          ult_dia = now.day
          c = '%s  %d-%s-%d ' % (dias[now.weekday()], now.day, meses[now.month-1], now.year)
@@ -220,6 +232,13 @@ def main():
             escrito = True
       else:
          escrito = False
+
+      if not sonado and seg == '00' and min in('00', '15', '30', '45'):
+         sonado = True
+         comando = "python campanadas.py 25 %d %d &" % (hora, min)
+         call(comando, shell=True)
+      if sonado and seg == 1:
+         sonado = False
 
       sleep(.1)
 
