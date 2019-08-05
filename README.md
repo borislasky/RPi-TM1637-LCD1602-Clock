@@ -13,6 +13,7 @@ Reloj con información meteorológica.
 Funciones:
  * hora + minutos mostrados en un módulo de 4x7segmentos TM1637
  * Fecha + información meteorológica mostrados en un LCD1602  
+ * Alarma: Seteo día hora de alarma mediante un mensaje MQTT. A vencimiento llamo a una API en mini que hará sonar un timbre
   
   La información metorológica la obtiene de una cuenta gratuita de openweathermap.  
   Se consulta mediante nodered instalado en el mismo host.  
