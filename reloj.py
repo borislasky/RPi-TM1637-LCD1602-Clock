@@ -25,7 +25,7 @@
 
 import sys
 from time import sleep
-from datetime import datetime
+from datetime import datetime, timedelta
 import RPi.GPIO as GPIO
 import paho.mqtt.client as mqtt
 import tm1637                    # 7 segmentos
@@ -43,11 +43,13 @@ lcd = i2c_LCD_driver.lcd()
 # Cliente MQTT
 from MQTT_AUTH import MQTT_USER, MQTT_PASS
 MQTT_HOST = 'localhost'
-MQTT_PORT = 1883     #default
 MQTT_RAIZ = '/torredembarra/DatosMeteo/#'
+MQTT_ALAR = '/torredembarra/reloj7/setalarma'
+MQTT_ALES = '/torredembarra/reloj7/alarma'
 MQTT_KEEP = 65535    # Un montón de segundos
-mqttc = mqtt.Client(client_id='Reloj_de_la_cajita', clean_session=True, userdata=None,
-      protocol=mqtt.MQTTv311, transport='tcp')
+MQTT_CLIE = 'Reloj_de_la_cajita'
+mqttc = mqtt.Client(client_id=MQTT_CLIE, clean_session=True, userdata=None,
+      transport='tcp')
 
 # Variables globales
 dias = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
@@ -70,6 +72,8 @@ viento_dir  = 0
 amanecer    = 'desc'
 anochecer   = 'desc'
 cielo       = 'desc'
+alarma      = 0
+alarmado    = True
 
 # Cada cuanto tiempo cambio de información meteorológica
 T_CARRUSEL  = 5   # en segundos
@@ -101,6 +105,8 @@ def carrusel():
    turno = (turno+1) % MAX_INFO
    return(c)
 
+def Publica(topic, mensaje):
+   mqttc.publish(topic, payload = mensaje, retain=True)
 
 
 def on_message(client, userdata, message):
@@ -108,6 +114,7 @@ def on_message(client, userdata, message):
    # variables globales correspondientes
    global temperatura, humedad, viento_vel, viento_dir
    global amanecer, anochecer, cielo, presion
+   global alarma, alarmado
 
    if message.topic == '/torredembarra/DatosMeteo/tempExt/estado':
       temperatura = message.payload
@@ -125,7 +132,10 @@ def on_message(client, userdata, message):
       cielo = message.payload
    elif message.topic == '/torredembarra/DatosMeteo/presion/estado':
       presion = message.payload
-
+   elif message.topic == MQTT_ALAR:
+      alarma = datetime.now() + timedelta(seconds=int(message.payload) * 60)
+      alarmado = False
+      Publica(MQTT_ALES, alarma.strftime('%Y-%m-%d %H:%M:%S'))
 
 
 
@@ -137,7 +147,7 @@ def CalcKmKn():
 
 def CalcFuerza(velKn):
    # En base a la velocidad del viento en Kn
-   # debuelve la Fuerza del viento segun escala Beaufort
+   # devuelve la Fuerza del viento segun escala Beaufort
 
    if(velKn == 0): 
       DescF = fuerzas[0]
@@ -192,8 +202,9 @@ def ini():
 
    mqttc.on_message = on_message
    mqttc.username_pw_set(MQTT_USER, MQTT_PASS)
-   mqttc.connect(MQTT_HOST, MQTT_PORT, MQTT_KEEP)
+   mqttc.connect(MQTT_HOST, 1883, MQTT_KEEP)
    mqttc.subscribe(MQTT_RAIZ, qos=0)
+   mqttc.subscribe(MQTT_ALAR, qos=0)
    mqttc.loop_start()
    lcd.lcd_clear()
 
@@ -206,24 +217,38 @@ def main():
    ult_seg  = -1
    escrito  = False
    sonado   = False
+   global alarma, alarmado
 
    while True:
       now = datetime.now()
-      #ahora = now.strftime('%H:%M:%S')
+
+      # Tratamiento de alarma
+      if not alarmado and alarma.strftime("%s") <= now.strftime("%s"):
+         Publica(MQTT_ALES, "")
+         alarmado = True
+
       hora = now.hour
       min  = now.minute
       seg  = now.second
+
+      # doble punto
       if seg != ult_seg:
          ult_seg = seg
          Display.ShowDoublepoint((int(seg)+1)%2)
+
+      # display hora y minuto
       if min != ult_min:
          ult_min = min
          Display.Show([0 if hora < 10 else hora/10, hora%10, 0 if min < 10 else min/10, min%10])
+
+      # display fecha
       if now.day != ult_dia:
          ult_dia = now.day
          c = '%s  %d-%s-%d ' % (dias[now.weekday()], now.day, meses[now.month-1], now.year)
          lcd.lcd_display_string('                ', 1)
          lcd.lcd_display_string(c, 1)
+
+      # display información meteorologica
       if int(seg)%T_CARRUSEL == 0:
          if not escrito:
             lcd.lcd_display_string('                ', 2)
@@ -232,6 +257,7 @@ def main():
       else:
          escrito = False
 
+      # carrillón
       if not sonado and seg == '00' and min in('00', '15', '30', '45'):
          sonado = True
          comando = "python campanadas.py 25 %d %d &" % (hora, min)
