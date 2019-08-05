@@ -31,13 +31,15 @@ import paho.mqtt.client as mqtt
 import tm1637                    # 7 segmentos
 import i2c_LCD_driver            # va por i2c (bus 1)
 from subprocess import call
+import requests
 
-# GPIOs TM1637
+
+# GPIOs 7 segmentos (TM1637)
 # CLK -> GPIO23 (Pin 16)
 # Di0 -> GPIO24 (Pin 18)
 Display = tm1637.TM1637(23,24,tm1637.BRIGHT_TYPICAL)
 
-# LCD1602
+# LCD1602. Va por i2c 1
 lcd = i2c_LCD_driver.lcd()
 
 # Cliente MQTT
@@ -50,6 +52,9 @@ MQTT_KEEP = 65535    # Un montón de segundos
 MQTT_CLIE = 'Reloj_de_la_cajita'
 mqttc = mqtt.Client(client_id=MQTT_CLIE, clean_session=True, userdata=None,
       transport='tcp')
+
+# URL de activación del timbre
+URL_TIMBRE = 'http://mini:1880/Timbre'
 
 # Variables globales
 dias = ['Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab', 'Dom']
@@ -224,6 +229,7 @@ def main():
 
       # Tratamiento de alarma
       if not alarmado and alarma.strftime("%s") <= now.strftime("%s"):
+         requests.get(url=URL_TIMBRE)
          Publica(MQTT_ALES, "")
          alarmado = True
 
@@ -249,7 +255,7 @@ def main():
          lcd.lcd_display_string(c, 1)
 
       # display información meteorologica
-      if int(seg)%T_CARRUSEL == 0:
+      if seg%T_CARRUSEL == 0:
          if not escrito:
             lcd.lcd_display_string('                ', 2)
             lcd.lcd_display_string(carrusel(), 2)
@@ -258,9 +264,10 @@ def main():
          escrito = False
 
       # carrillón
-      if not sonado and seg == '00' and min in('00', '15', '30', '45'):
+      if not sonado and seg == 0 and min in(0, 15, 30, 45):
          sonado = True
-         comando = "python campanadas.py 25 %d %d &" % (hora, min)
+         print('Carrillón', hora, min)
+         comando = "python /home/pi/reloj/campanadas.py 25 %d %d &" % (hora, min)
          call(comando, shell=True)
       if sonado and seg == 1:
          sonado = False
